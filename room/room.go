@@ -27,6 +27,9 @@ type RoomActions func(map[uuid.UUID]*User)
 func generateId() uuid.UUID {
 	return uuid.New()
 }
+func IdTryFromString(id string) (uuid.UUID, error) {
+	return uuid.Parse(id)
+}
 
 func CreateRoom() *Room {
 	room := new(Room)
@@ -41,7 +44,7 @@ func CreateRoom() *Room {
 	return room
 }
 
-func createRoomWithId(id uuid.UUID) *Room {
+func CreateRoomWithId(id uuid.UUID) *Room {
 	room := CreateRoom()
 	room.Id = id
 
@@ -70,14 +73,26 @@ func AddUser(conn *websocket.Conn, roomId uuid.UUID) *User {
 	room, exist := rooms[roomId]
 
 	if !exist {
-		room = createRoomWithId(roomId)
+		room = CreateRoomWithId(roomId)
 	}
 
 	room.Users[user.Id] = user
 
 	listenChatFromUser(user, room)
+	sendJoinMessage(room, user)
 
 	return user
+}
+
+func sendJoinMessage(room *Room, user *User) {
+	message := user.Id.String() + " joined the room"
+	sendSystemChat(room, message)
+}
+
+func sendSystemChat(room *Room, message string) {
+	msg := "System: " + message
+	room.chatPipe <- msg
+
 }
 
 func listenChatFromUser(user *User, room *Room) {
